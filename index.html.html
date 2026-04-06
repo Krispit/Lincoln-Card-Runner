@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card Runner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Crimson+Text:ital,wght@0,400;1,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --felt: #1a4a2e;
+    --felt-light: #1f5535;
+    --felt-dark: #12361f;
+    --gold: #c9a84c;
+    --gold-light: #e8c96a;
+    --card-white: #f8f2e8;
+    --card-red: #c0392b;
+    --card-black: #1a1a2e;
+    --accent: #e8c96a;
+  }
+
+  body {
+    background: var(--felt-dark);
+    background-image:
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 8px),
+      repeating-linear-gradient(-45deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-family: 'Crimson Text', Georgia, serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 6px;
+  }
+
+  .suit-icon {
+    font-size: 1.6rem;
+    color: var(--gold);
+    animation: suitPulse 2.4s ease-in-out infinite;
+  }
+  .suit-icon:nth-child(2) { animation-delay: 0.6s; color: var(--card-red); }
+  .suit-icon:nth-child(4) { animation-delay: 1.2s; }
+  .suit-icon:nth-child(5) { animation-delay: 1.8s; color: var(--card-red); }
+
+  @keyframes suitPulse {
+    0%,100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.15); }
+  }
+
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    font-size: 2.6rem;
+    color: var(--gold);
+    letter-spacing: 6px;
+    text-shadow: 0 0 30px rgba(201,168,76,0.4), 2px 2px 0 rgba(0,0,0,0.5);
+  }
+
+  #score-display {
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    color: var(--gold-light);
+    letter-spacing: 4px;
+    margin-bottom: 16px;
+    opacity: 0.85;
+  }
+
+  #game-wrapper {
+    position: relative;
+    border: 3px solid var(--gold);
+    border-radius: 6px;
+    box-shadow:
+      0 0 0 1px rgba(201,168,76,0.2),
+      0 0 40px rgba(201,168,76,0.15),
+      inset 0 0 60px rgba(0,0,0,0.3),
+      8px 8px 0 rgba(0,0,0,0.4);
+    overflow: hidden;
+  }
+
+  /* Corner ornaments */
+  #game-wrapper::before,
+  #game-wrapper::after {
+    content: '♦';
+    position: absolute;
+    font-size: 1.1rem;
+    color: var(--gold);
+    opacity: 0.4;
+    z-index: 10;
+    pointer-events: none;
+  }
+  #game-wrapper::before { top: 6px; left: 10px; }
+  #game-wrapper::after  { bottom: 6px; right: 10px; }
+
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(12, 30, 18, 0.92);
+    backdrop-filter: blur(2px);
+  }
+  #overlay.hidden { display: none; }
+
+  .overlay-suits {
+    font-size: 2rem;
+    letter-spacing: 16px;
+    margin-bottom: 10px;
+  }
+
+  #overlay-title {
+    font-family: 'Cinzel', serif;
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: var(--gold);
+    letter-spacing: 5px;
+    text-shadow: 0 0 20px rgba(201,168,76,0.5);
+    margin-bottom: 4px;
+  }
+
+  #overlay-sub {
+    font-family: 'Crimson Text', serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    color: var(--gold-light);
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+    opacity: 0.8;
+  }
+
+  .divider {
+    width: 200px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--gold), transparent);
+    margin: 8px 0 20px;
+  }
+
+  #start-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--felt-dark);
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    border: none;
+    padding: 12px 38px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+    box-shadow: 0 4px 0 #7a5c18, 0 6px 20px rgba(0,0,0,0.4);
+    text-transform: uppercase;
+  }
+  #start-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #7a5c18, 0 10px 25px rgba(0,0,0,0.4);
+    background: linear-gradient(135deg, #f0d47a, var(--gold-light));
+  }
+  #start-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #7a5c18;
+  }
+
+  #hint {
+    font-family: 'Crimson Text', serif;
+    font-style: italic;
+    font-size: 0.85rem;
+    color: rgba(201,168,76,0.5);
+    letter-spacing: 2px;
+    margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="title-wrap">
+  <span class="suit-icon">♠</span>
+  <span class="suit-icon">♥</span>
+  <h1>CARD RUNNER</h1>
+  <span class="suit-icon">♣</span>
+  <span class="suit-icon">♦</span>
+</div>
+<div id="score-display">SCORE: <span id="score">0</span> &nbsp;·&nbsp; BEST: <span id="hi-score">0</span></div>
+
+<div id="game-wrapper">
+  <canvas id="gameCanvas" width="750" height="220"></canvas>
+
+  <div id="overlay">
+    <div class="overlay-suits">♠ ♥ ♣ ♦</div>
+    <div id="overlay-title">CARD RUNNER</div>
+    <div id="overlay-sub" id="overlay-sub">Dodge the obstacle cards!</div>
+    <div class="divider"></div>
+    <button id="start-btn">DEAL ME IN</button>
+    <div id="hint">SPACE / TAP to jump &nbsp;·&nbsp; ↓ to slide</div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const overlayTitle = document.getElementById('overlay-title');
+const overlaySub = document.getElementById('overlay-sub');
+const startBtn = document.getElementById('start-btn');
+const scoreEl = document.getElementById('score');
+const hiScoreEl = document.getElementById('hi-score');
+
+const W = canvas.width, H = canvas.height;
+const GROUND = H - 36;
+
+// ── PALETTE ──────────────────────────────────────────────
+const C = {
+  felt:       '#1a4a2e',
+  feltLight:  '#1f5535',
+  feltDark:   '#12361f',
+  feltLine:   '#16412a',
+  gold:       '#c9a84c',
+  goldLight:  '#e8c96a',
+  cardWhite:  '#f8f2e8',
+  cardCream:  '#ede5d0',
+  cardBorder: '#c8b89a',
+  cardRed:    '#c0392b',
+  cardBlack:  '#1a1a2e',
+  chipGold:   '#d4a843',
+  dust:       '#2a6040',
+};
+
+// ── SUITS ─────────────────────────────────────────────────
+const SUITS = ['♠','♥','♣','♦'];
+const RED_SUITS = new Set(['♥','♦']);
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+function randSuit() { return SUITS[Math.floor(Math.random() * 4)]; }
+function randRank() { return RANKS[Math.floor(Math.random() * 13)]; }
+
+let state = 'idle';
+let score = 0, hiScore = 0, frame = 0, speed = 5;
+let animFrame;
+
+// ── RUNNER (Ace of Spades card) ──────────────────────────
+const runner = {
+  x: 80, y: GROUND,
+  w: 32, h: 44,
+  vy: 0, onGround: true, sliding: false,
+  wobble: 0,
+
+  jump() {
+    if (this.onGround && !this.sliding) {
+      this.vy = -13.5;
+      this.onGround = false;
+      this.wobble = 0.4;
+    }
+  },
+  slide(val) { this.sliding = val; },
+
+  update() {
+    if (!this.onGround) {
+      this.vy += 0.65;
+      this.y += this.vy;
+      if (this.y >= GROUND) {
+        this.y = GROUND;
+        this.vy = 0;
+        this.onGround = true;
+      }
+    }
+    if (this.wobble > 0) this.wobble -= 0.04;
+  },
+
+  getRect() {
+    if (this.sliding) return { x: this.x, y: GROUND - 20, w: this.w + 14, h: 20 };
+    return { x: this.x + 2, y: this.y - this.h, w: this.w - 4, h: this.h };
+  },
+
+  draw() {
+    ctx.save();
+    const cx = this.x + this.w / 2;
+    const cy = this.y - (this.sliding ? 10 : this.h / 2);
+    ctx.translate(cx, cy);
+    const rot = this.wobble * Math.sin(frame * 0.3);
+    ctx.rotate(rot);
+
+    if (this.sliding) {
+      // Horizontal card
+      drawCard(-22, -10, 44, 20, '♠', 'A', false, true);
+    } else {
+      // Upright card with slight bob
+      drawCard(-this.w/2, -this.h/2, this.w, this.h, '♠', 'A', false, false);
+      // Little legs
+      if (this.onGround) {
+        const lp = Math.floor(frame * 0.25) % 2;
+        ctx.fillStyle = C.cardBlack;
+        ctx.fillRect(-8, this.h/2, 5, lp ? 8 : 5);
+        ctx.fillRect(3, this.h/2, 5, lp ? 5 : 8);
+      }
+    }
+    ctx.restore();
+  }
+};
+
+// ── DRAW A PLAYING CARD ───────────────────────────────────
+function drawCard(x, y, w, h, suit, rank, faceDown = false, horizontal = false) {
+  const isRed = RED_SUITS.has(suit);
+  const suitColor = isRed ? C.cardRed : C.cardBlack;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  roundRect(ctx, x + 3, y + 3, w, h, 4);
+  ctx.fill();
+
+  // Card body
+  ctx.fillStyle = faceDown ? C.cardBorder : C.cardWhite;
+  ctx.beginPath();
+  roundRect(ctx, x, y, w, h, 4);
+  ctx.fill();
+
+  // Border
+  ctx.strokeStyle = C.cardBorder;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  roundRect(ctx, x, y, w, h, 4);
+  ctx.stroke();
+
+  if (faceDown) {
+    // Back pattern — classic diamond hatch
+    ctx.strokeStyle = C.cardRed;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.35;
+    for (let i = -h; i < w + h; i += 6) {
+      ctx.beginPath(); ctx.moveTo(x + i, y); ctx.lineTo(x + i - h, y + h); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + i, y); ctx.lineTo(x + i + h, y + h); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // Border inner line
+    ctx.strokeStyle = C.cardRed;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    roundRect(ctx, x + 4, y + 4, w - 8, h - 8, 2);
+    ctx.stroke();
+    return;
+  }
+
+  // Rank + suit corners
+  ctx.fillStyle = suitColor;
+  const fs = Math.max(8, Math.min(w * 0.32, 13));
+  ctx.font = `bold ${fs}px Cinzel, serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(rank, x + 3, y + 2);
+
+  ctx.font = `${fs * 0.85}px serif`;
+  ctx.fillText(suit, x + 3, y + fs + 2);
+
+  // Bottom corner (rotated)
+  ctx.save();
+  ctx.translate(x + w, y + h);
+  ctx.rotate(Math.PI);
+  ctx.fillStyle = suitColor;
+  ctx.font = `bold ${fs}px Cinzel, serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(rank, 3, 2);
+  ctx.font = `${fs * 0.85}px serif`;
+  ctx.fillText(suit, 3, fs + 2);
+  ctx.restore();
+
+  // Center pip
+  ctx.fillStyle = suitColor;
+  const cs = Math.min(w * 0.45, h * 0.35, 22);
+  ctx.font = `${cs}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(suit, x + w / 2, y + h / 2);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+}
+
+// ── OBSTACLES (stacks of cards) ──────────────────────────
+let obstacles = [];
+let nextObstacle = 90;
+
+const OBS_TYPES = [
+  // Single tall card upright
+  { cards: [{dx:0, dy:0, w:30, h:50, angle:0}] },
+  // Two cards leaning
+  { cards: [{dx:0, dy:0, w:28, h:45, angle:-0.15}, {dx:14, dy:5, w:28, h:45, angle:0.15}] },
+  // Three card fan
+  { cards: [{dx:0, dy:0, w:26, h:42, angle:-0.25}, {dx:12, dy:2, w:26, h:42, angle:0}, {dx:24, dy:0, w:26, h:42, angle:0.25}] },
+  // Short wide stack
+  { cards: [{dx:0, dy:0, w:32, h:36, angle:0.05}, {dx:3, dy:-6, w:32, h:36, angle:-0.05}] },
+];
+
+function spawnObstacle() {
+  const type = OBS_TYPES[Math.floor(Math.random() * OBS_TYPES.length)];
+  const suit = randSuit(), rank = randRank();
+  obstacles.push({ x: W + 20, type, suit, rank });
+}
+
+function drawObstacle(obs) {
+  obs.type.cards.forEach((cd, i) => {
+    ctx.save();
+    const cx = obs.x + cd.dx + cd.w / 2;
+    const cy = GROUND - cd.h / 2 + cd.dy;
+    ctx.translate(cx, cy);
+    ctx.rotate(cd.angle);
+    const s = i === obs.type.cards.length - 1 ? obs.suit : randSeedSuit(obs.x + i);
+    const r = i === obs.type.cards.length - 1 ? obs.rank : randSeedRank(obs.x + i);
+    drawCard(-cd.w/2, -cd.h/2, cd.w, cd.h, s, r, i < obs.type.cards.length - 1);
+    ctx.restore();
+  });
+}
+
+function randSeedSuit(seed) { return SUITS[Math.abs(Math.floor(seed * 7919)) % 4]; }
+function randSeedRank(seed) { return RANKS[Math.abs(Math.floor(seed * 6271)) % 13]; }
+
+function getObsRect(obs) {
+  let minX = Infinity, maxX = -Infinity, maxH = 0;
+  obs.type.cards.forEach(cd => {
+    minX = Math.min(minX, cd.dx);
+    maxX = Math.max(maxX, cd.dx + cd.w);
+    maxH = Math.max(maxH, cd.h - cd.dy);
+  });
+  return { x: obs.x + minX + 4, y: GROUND - maxH + 4, w: maxX - minX - 8, h: maxH - 4 };
+}
+
+// ── FLOATING CHIPS / SUIT ICONS ────────────────────────────
+let floaters = [];
+let nextFloat = 50;
+
+function spawnFloater() {
+  const suits = ['♠','♥','♣','♦'];
+  floaters.push({
+    x: W + 10,
+    y: 15 + Math.random() * 60,
+    suit: suits[Math.floor(Math.random() * 4)],
+    opacity: 0.18 + Math.random() * 0.12,
+    size: 12 + Math.random() * 10,
+  });
+}
+
+// ── PARTICLES ─────────────────────────────────────────────
+let particles = [];
+
+function spawnRunParticles() {
+  if (frame % 5 === 0 && runner.onGround) {
+    particles.push({ x: runner.x + 4, y: GROUND, vx: -1 - Math.random(), vy: -0.5 - Math.random() * 0.5, life: 18, char: Math.random() > 0.5 ? '·' : '∙' });
+  }
+}
+
+// ── GROUND MARKS ──────────────────────────────────────────
+let groundMarks = [];
+let nextMark = 25;
+
+// ── COLLISION ─────────────────────────────────────────────
+function rectsOverlap(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x &&
+         a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// ── INPUT ─────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    e.preventDefault();
+    if (state === 'running') runner.jump();
+    else startGame();
+  }
+  if (e.code === 'ArrowDown') { if (state === 'running') runner.slide(true); }
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'ArrowDown') runner.slide(false);
+});
+canvas.addEventListener('pointerdown', () => {
+  if (state === 'running') runner.jump();
+  else startGame();
+});
+startBtn.addEventListener('click', e => { e.stopPropagation(); startGame(); });
+
+// ── GAME ──────────────────────────────────────────────────
+function startGame() {
+  state = 'running';
+  score = 0; frame = 0; speed = 5;
+  obstacles = []; floaters = []; particles = []; groundMarks = [];
+  nextObstacle = 90; nextFloat = 50; nextMark = 25;
+  runner.y = GROUND; runner.vy = 0;
+  runner.onGround = true; runner.sliding = false; runner.wobble = 0;
+  overlay.classList.add('hidden');
+  loop();
+}
+
+function loop() {
+  if (state !== 'running') return;
+  animFrame = requestAnimationFrame(loop);
+  update();
+  draw();
+}
+
+function update() {
+  frame++;
+  score++;
+  speed = 5 + Math.floor(score / 300) * 0.4;
+  scoreEl.textContent = score;
+
+  runner.update();
+  spawnRunParticles();
+
+  // Floaters
+  nextFloat--;
+  if (nextFloat <= 0) { spawnFloater(); nextFloat = 55 + Math.floor(Math.random() * 70); }
+  floaters.forEach(f => f.x -= speed * 0.25);
+  floaters = floaters.filter(f => f.x > -30);
+
+  // Ground marks
+  nextMark--;
+  if (nextMark <= 0) {
+    groundMarks.push({ x: W, len: 6 + Math.random() * 22, type: Math.random() > 0.7 ? 'suit' : 'line' });
+    nextMark = 18 + Math.floor(Math.random() * 35);
+  }
+  groundMarks.forEach(m => m.x -= speed);
+  groundMarks = groundMarks.filter(m => m.x > -60);
+
+  // Obstacles
+  nextObstacle--;
+  if (nextObstacle <= 0) {
+    spawnObstacle();
+    nextObstacle = 72 + Math.floor(Math.random() * 75) - Math.floor(score / 500) * 8;
+    nextObstacle = Math.max(nextObstacle, 48);
+  }
+  obstacles.forEach(o => o.x -= speed);
+  obstacles = obstacles.filter(o => o.x > -120);
+
+  // Particles
+  particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.life--; });
+  particles = particles.filter(p => p.life > 0);
+
+  // Collision
+  const dr = runner.getRect();
+  for (const obs of obstacles) {
+    if (rectsOverlap(dr, getObsRect(obs))) { die(); return; }
+  }
+}
+
+function die() {
+  state = 'dead';
+  cancelAnimationFrame(animFrame);
+  if (score > hiScore) hiScore = score;
+  hiScoreEl.textContent = hiScore;
+  draw();
+  overlayTitle.textContent = 'BUSTED!';
+  overlaySub.textContent = `Score: ${score}  ·  Best: ${hiScore}`;
+  startBtn.textContent = 'DEAL AGAIN';
+  overlay.classList.remove('hidden');
+}
+
+// ── DRAW ──────────────────────────────────────────────────
+function draw() {
+  // Felt background
+  ctx.fillStyle = C.felt;
+  ctx.fillRect(0, 0, W, H);
+
+  // Felt texture lines
+  ctx.strokeStyle = C.feltLine;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.4;
+  for (let x = 0; x < W; x += 28) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += 28) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Floating suit icons (background ambiance)
+  floaters.forEach(f => {
+    ctx.globalAlpha = f.opacity;
+    ctx.fillStyle = RED_SUITS.has(f.suit) ? C.cardRed : C.goldLight;
+    ctx.font = `${f.size}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(f.suit, f.x, f.y);
+  });
+  ctx.globalAlpha = 1;
+
+  // Ground (green felt strip with gold line)
+  ctx.fillStyle = C.feltDark;
+  ctx.fillRect(0, GROUND, W, H - GROUND);
+
+  // Gold ground line
+  ctx.strokeStyle = C.gold;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, GROUND); ctx.lineTo(W, GROUND);
+  ctx.stroke();
+
+  // Ground marks
+  groundMarks.forEach(m => {
+    ctx.globalAlpha = 0.3;
+    if (m.type === 'suit') {
+      ctx.fillStyle = C.goldLight;
+      ctx.font = '9px serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(SUITS[Math.floor(m.x * 0.01 * 4) % 4], m.x, GROUND + 14);
+    } else {
+      ctx.fillStyle = C.gold;
+      ctx.fillRect(m.x, GROUND + 8, m.len, 1.5);
+    }
+    ctx.globalAlpha = 1;
+  });
+
+  // Run particles (card debris)
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life / 18 * 0.6;
+    ctx.fillStyle = C.goldLight;
+    ctx.font = '8px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.char, p.x, p.y);
+  });
+  ctx.globalAlpha = 1;
+
+  // Obstacles
+  obstacles.forEach(drawObstacle);
+
+  // Runner
+  runner.draw();
+
+  // HUD — score in gold top right
+  ctx.fillStyle = C.gold;
+  ctx.font = 'bold 13px Cinzel, serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText(String(score).padStart(5,'0'), W - 12, 10);
+
+  // Tiny suit trail in top left
+  ctx.font = '10px serif';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = C.goldLight;
+  ctx.globalAlpha = 0.4;
+  ctx.fillText('♠ ♥ ♣ ♦', 10, 10);
+  ctx.globalAlpha = 1;
+}
+
+draw();
+</script>
+</body>
+</html>
